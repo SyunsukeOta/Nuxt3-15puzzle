@@ -1,0 +1,33 @@
+blockData: [
+	[
+		{ color: "blue", bid: 1 },
+		{ color: "blue", bid: 2 },
+		{ color: "blue", bid: 3 },
+		{ color: "blue", bid: 4 },
+	],
+	[
+		{ color: "orange", bid: 5 },
+		{ color: "orange", bid: 6 },
+		{ color: "orange", bid: 7 },
+		{ color: "orange", bid: 8 },
+	],
+	[
+		{ color: "yellow", bid: 9 },
+		{ color: "yellow", bid: 10 },
+		{ color: "yellow", bid: 11 },
+		{ color: "yellow", bid: 12 },
+	],
+	[
+		{ color: "green", bid: 13 },
+		{ color: "green", bid: 14 },
+		{ color: "green", bid: 15 },
+		{ color: "", bid: null },
+	]
+]
+
+<div v-for="(row, rowIndex) in blockData" :key="rowIndex">
+	<div v-for="block in row" :key="block.bid">
+		<p>Color: {{ block.color }}</p>
+		<p>Bid: {{ block.bid }}</p>
+	</div>
+</div>
