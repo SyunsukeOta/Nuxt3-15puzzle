@@ -1,185 +1,177 @@
-<template>
-  <section>
-    <div>
-      <div class="timer tx_black">{{ minutes }}:{{ seconds }}</div>
-      <div class="gray frout_black frame" id="sample">
-        <div v-for="(bData, index) in blockData" :key="index">
-          <div class="container">
-            <div class="block" v-for="(data, id) in bData" :class="data.color" @click="clickEvent(id,index)" :key="id">
-              <div class="text tx_white bl_text bold">
-                {{ data.number }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-</template>
-<script>
-export default {
-  data: function() {
-    return {
-      color: "green",
-      direction: ["left", "right", "top", "bottom"],
-      moveCount: 1000,
-      timerCount: 0,
-      timerObject: null,
-      seconds: '00',
-      minutes: '00',
-      holeX: 0,
-      holeY: 0,
-      dir: '',
-      checkPoint: 0,
-      blockData: [
-        [
-          { color: "blue", number: 1 },
-          { color: "blue", number: 2 },
-          { color: "blue", number: 3 },
-          { color: "blue", number: 4 },
-        ],
-        [
-          { color: "orange", number: 5 },
-          { color: "orange", number: 6 },
-          { color: "orange", number: 7 },
-          { color: "orange", number: 8 },
-        ],
-        [
-          { color: "yellow", number: 9 },
-          { color: "yellow", number: 10 },
-          { color: "", number: null },
-          { color: "yellow", number: 12 },
-        ],
-        [
-          { color: "green", number: 13 },
-          { color: "green", number: 14 },
-          { color: "yellow", number: 11 },
-          { color: "green", number: 15 },
-        ]
-      ]
-    }
-  },
-  methods: {
-        clickEvent: function(x,y) {
-      this.checkMove(x,y);
-      this.checkCorrect();
-    },
-    checkMove: function(x,y) {
-      if (x>0 && !this.blockData[y][x-1].number) {
-        this.move(x,y,"left");
-      }
-      if (x<3 && !this.blockData[y][x+1].number) {
-        this.move(x,y,"right");
-      }
-      if (y>0 && !this.blockData[y-1][x].number) {
-        this.move(x,y,"top");
-      }
-      if (y<3 && !this.blockData[y+1][x].number) {
-        this.move(x,y,"bottom");
-      }
-    },
-    checkHole: function(x, y, direction) {
-      if (direction == "left" && x<3) {
-        this.move(x+1, y, "left");
-        this.holeX++;
-      }
-      if (direction == "right" && x>0) {
-        this.move(x-1, y, "right");
-        this.holeX--;
-      }
-      if (direction == "top" && y<3) {
-        this.move(x, y+1, "top");
-        this.holeY++;
-      }
-      if (direction == "bottom" && y>0) {
-        this.move(x, y-1, "bottom");
-        this.holeY--;
-      }
-    },
-    move: function(x,y,direction) {
-      let pointX = x, pointY = y;
-      if (direction === "left") pointX--;
-      if (direction === "right") pointX++;
-      if (direction === "top") pointY--;
-      if (direction === "bottom")pointY++;
-      this.blockData[pointY][pointX].color = this.blockData[y][x].color;
-      this.blockData[pointY][pointX].number = this.blockData[y][x].number;
-      this.blockData[y][x].color = "";
-      this.blockData[y][x].number = null;
-    },
-    checkCorrect: function() {
-      for(let i=0; i<15; i++) {
-        this.checkPoint = this.blockData[Math.floor(i/4)][i%4].number;
-        if (this.checkPoint-(i+1)) return;
-      }
-      console.log("Yes");
-      this.correct();
-    },
-    correct: function() {
-      this.stop();
-      localStorage.setItem('count', this.timerCount.toString());
-      location.href = './result.vue';
-    },
-    convert: function() {
-      this.seconds = (this.timerCount%60).toString(10);
-      if (this.seconds.length == 1) {
-        this.seconds = '0' + this.seconds;
-      }
-      this.minutes = (Math.floor(this.timerCount/60)).toString(10);
-      if (this.minutes.length == 1) {
-        this.minutes = '0' + this.minutes;
-      }
-    },
-    count: function() {
-      this.timerCount++;
-      this.convert();
-    },
-    start: function() {
-      console.log('OK');
-      this.timerCount = 0;
-      this.timerObject = setInterval(this.count, 1000);
-    },
-    stop: function() {
-      clearInterval(this.timerObject);
-    }
-  },
-  mounted: function () {
-    console.log('mounted');
-    for(let i=0; i<16; i++) {
-      if (!this.blockData[Math.floor(i/4)][i%4].number) {
-        this.holeX = i%4;
-        this.holeY = Math.floor(i/4);
-      }
-    }
-    for(let i=0; i<this.moveCount; i++) {
-      this.dir = this.direction[Math.floor(Math.random()*4)];
-      this.checkHole(this.holeX, this.holeY, this.dir);
-    }
-    this.start();
-  }
+<script setup lang="ts">
+import { useTimer } from "@/composables/useTimer"
+import type { Block as BlockType } from "@/interfaces"
+import type { Direction } from "@/interfaces"
+
+onMounted(() => {
+	setHole()
+	initTimer()
+	startTimer()
+})
+
+onUnmounted(() => {
+	stopTimer()
+})
+
+const router = useRouter()
+const { timer, startTimer, stopTimer, initTimer } = useTimer()
+
+const colors: BlockType["color"][] = ["blue", "orange", "yellow", "green", ""]
+const blockData = ref<BlockType[][]>(colors.slice(0, 4).map((color, rowIndex) => {
+	return Array.from({ length: 4 }, (_, colIndex) => ({
+		color,
+		bid: rowIndex * 4 + colIndex + 1
+	}))
+}))
+blockData.value[3][3] = { color: "", bid: null }
+const directions: Direction[] = ["left", "right", "top", "bottom"]
+const colIndex = ref<number | null>(null)
+const rowIndex = ref<number | null>(null)
+
+const setHole = () => {
+	const result = findHole()
+	if (result) {
+		colIndex.value = result.colIndex
+		rowIndex.value = result.rowIndex
+		for (let i = 0; i < 1000; i++) {
+			let direction = directions[Math.floor(Math.random()*4)]
+			if (checkHole(direction)) {
+				move(colIndex.value, rowIndex.value, direction)
+			}
+		}
+	}
+}
+
+const findHole = () => {
+	const result = blockData.value.reduce((acc, row, rowIndex) => {
+		const colIndex = row.findIndex(block => block.bid === null)
+		if (colIndex !== -1) {
+			return { colIndex, rowIndex }
+		}
+		return acc
+	}, null as { colIndex: number, rowIndex: number } | null)
+	return result
+}
+
+
+const correct = () => {
+	router.push("result")
+}
+
+const move = (x: number, y: number, direction: Direction) => {
+	let pointX = x, pointY = y
+	switch (direction) {
+		case "left":
+			pointX--
+			break
+		case "right":
+			pointX++
+			break
+		case "top":
+			pointY--
+			break
+		case "bottom":
+			pointY++
+			break
+		default:
+			break
+	}
+	blockData.value[pointY][pointX].color = blockData.value[y][x].color
+	blockData.value[pointY][pointX].bid = blockData.value[y][x].bid
+	blockData.value[y][x].color = ""
+	blockData.value[y][x].bid = null
+}
+
+const checkMove = (x: number, y: number) => {
+	if (x > 0 && !blockData.value[y][x-1].bid) move(x, y, "left")
+	if (x < 3 && !blockData.value[y][x+1].bid) move(x, y, "right")
+	if (y > 0 && !blockData.value[y-1][x].bid) move(x, y, "top")
+	if (y < 3 && !blockData.value[y+1][x].bid) move(x, y, "bottom")
+}
+
+const checkCorrect = () => {
+	let count = 1
+	const isCorrect = blockData.value.some(row => {
+		return row.some(block => {
+			if (block.bid != count && count < 16) {
+				return true
+			}
+			count++
+			return false
+		})
+	})
+	if (isCorrect) return 0
+	correct()
+}
+
+const checkHole = (direction: Direction) => {
+	if (colIndex.value == null || rowIndex.value == null) return 0
+	switch (direction) {
+		case "left":
+			if (colIndex.value < 3) {
+				colIndex.value++
+				return true
+			}
+			break
+		case "right":
+			if (colIndex.value > 0) {
+				colIndex.value--
+				return true
+			}
+			break
+		case "top":
+			if (rowIndex.value < 3) {
+				rowIndex.value++
+				return true
+			}
+			break
+		case "bottom":
+			if (rowIndex.value > 0) {
+				rowIndex.value--
+				return true
+			}
+			break
+		default:
+			break
+	}
+	return false
+}
+
+const clickEvent = (x: number, y: number) => {
+	checkMove(x, y)
+	checkCorrect()
 }
 </script>
+
+<template>
+	<section>
+		<div>
+			<div class="timer tx_black">{{ timer.minutes }}:{{ timer.seconds }}</div>
+			<Block :blockData="blockData" :clickEvent="clickEvent"/>
+		</div>
+	</section>
+</template>
+
 <style>
 html {
-  height: 100%;
+	height: 100%;
 }
 
 body {
-  height: 100%;
-  margin: 0;
+	height: 100%;
+	margin: 0;
 }
 
 #base {
-  position: relative;
-  width: 100%;
-  height: 100%;
+	position: relative;
+	width: 100%;
+	height: 100%;
 }
 
 #sample {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 }
-
 </style>
